@@ -75,18 +75,18 @@ var commandRegEx = /^\/([a-zA-Z0-9_\.~-]+)\/([a-zA-Z0-9_\.~-]+)\/(.*)/,  // /{ke
  * UnknownMethod handler
  */
 function unknownMethodHandler(req, res) {
-  if (req.method.toLowerCase() === 'options') {
-    var allowHeaders = ['Accept', 'Accept-Version', 'Content-Type', 'Api-Version', 'Origin', 'X-Requested-With']; // added Origin & X-Requested-With
+    if (req.method.toLowerCase() === 'options') {
+        var allowHeaders = ['Accept', 'Accept-Version', 'Content-Type', 'Api-Version', 'Origin', 'X-Requested-With']; // added Origin & X-Requested-With
 
-    if (res.methods.indexOf('OPTIONS') === -1) res.methods.push('OPTIONS');
+        if (res.methods.indexOf('OPTIONS') === -1) res.methods.push('OPTIONS');
 
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
-    res.header('Access-Control-Allow-Origin', req.headers.origin);
+        res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE');
+        res.header('Access-Control-Allow-Origin', req.headers.origin);
 
-    return res.send(204);
-  }
-  else
-    return res.send(new restify.MethodNotAllowedError());
+        return res.send(204);
+    }
+    else
+        return res.send(new restify.MethodNotAllowedError());
 }
 
 server.on('MethodNotAllowed', unknownMethodHandler);
@@ -113,12 +113,12 @@ var checkIP = function (config, req) {
         curIP,
         b,
         block = [];
-    for (var i=0, z=config.ips.length-1; i<=z; i++) {
+    for (var i = 0, z = config.ips.length - 1; i <= z; i++) {
         curIP = config.ips[i].split(".");
         b = 0;
         // Compare each block
-        while (b<=3) {
-            (curIP[b]===ip[b] || curIP[b]==="*") ? block[b] = true : block[b] = false;
+        while (b <= 3) {
+            (curIP[b] === ip[b] || curIP[b] === "*") ? block[b] = true : block[b] = false;
             b++;
         }
         // Check all blocks
@@ -141,7 +141,7 @@ var checkReq = function (config, req, res) {
     res.header('Access-Control-Allow-Origin', '*');
 
     // Check key and IP
-    if(!checkKey(config, req) || !checkIP(config, req)) {
+    if (!checkKey(config, req) || !checkIP(config, req)) {
         res.send(401);
         return false;
     }
@@ -186,7 +186,7 @@ var resSuccess = function (data, res) {
  * Merge function
  */
 
-var merge = function (obj1,obj2) {
+var merge = function (obj1, obj2) {
     var mobj = {},
         attrname;
     for (attrname in obj1) { mobj[attrname] = obj1[attrname]; }
@@ -240,7 +240,7 @@ server.get(commandRegEx, function (req, res, next) {
                 } else {
 
                     // Ensure ending slash on path
-                    (path.slice(-1)!=="/") ? path = path + "/" : path = path;
+                    (path.slice(-1) !== "/") ? path = path + "/" : path = path;
 
                     var output = {},
                         output_dirs = {},
@@ -252,7 +252,7 @@ server.get(commandRegEx, function (req, res, next) {
                     // Function to build item for output objects
                     var createItem = function (current, relpath, type, link) {
                         return {
-                            path: relpath.replace('//','/'),
+                            path: relpath.replace('//', '/'),
                             type: type,
                             size: fs.lstatSync(current).size,
                             atime: fs.lstatSync(current).atime.getTime(),
@@ -267,19 +267,204 @@ server.get(commandRegEx, function (req, res, next) {
                     // Loop through and create two objects
                     // 1. Directories
                     // 2. Files
-                    for (var i=0, z=files.length-1; i<=z; i++) {
+                    for (var i = 0, z = files.length - 1; i <= z; i++) {
                         current = path + files[i];
-                        relpath = current.replace(config.base,"");
+                        relpath = current.replace(config.base, "");
                         (fs.lstatSync(current).isSymbolicLink()) ? link = true : link = false;
                         if (fs.lstatSync(current).isDirectory()) {
-                            output_dirs[files[i]] = createItem(current,relpath,"directory",link);
+                            output_dirs[files[i]] = createItem(current, relpath, "directory", link);
                         } else {
-                            output_files[files[i]] = createItem(current,relpath,"file",link);
+                            output_files[files[i]] = createItem(current, relpath, "file", link);
                         }
                     }
 
                     // Merge so we end up with alphabetical directories, then files
-                    output = merge(output_dirs,output_files);
+                    output = merge(output_dirs, output_files);
+                    //output = merge(output_files);
+
+                    // Send output
+                    resSuccess(output, res);
+                }
+            });
+            break;
+
+        case "content":
+            fs.readdir(path, function (err, files) {
+                if (err) {
+                    resError(101, err, res);
+                } else {
+
+                    // Ensure ending slash on path
+                    (path.slice(-1) !== "/") ? path = path + "/" : path = path;
+
+                    var output = {},
+                        output_dirs = {},
+                        output_files = {},
+                        current,
+                        relpath,
+                        link;
+
+                    // Function to build item for output objects
+                    var createItem = function (current, relpath, type, link) {
+                        return {
+                            path: relpath.replace('//', '/'),
+                            type: type,
+                            size: fs.lstatSync(current).size,
+                            atime: fs.lstatSync(current).atime.getTime(),
+                            mtime: fs.lstatSync(current).mtime.getTime(),
+                            link: link
+                        };
+                    };
+                    var extMd = function extension(element) {
+                        var path = require('path');
+                        var extName = path.extname(element);
+                        return extName === '.md' // change to whatever extensions you want
+                    };
+
+                    // Sort alphabetically
+                    files.sort();
+
+                    // Loop through and create two objects
+                    // 1. Directories
+                    // 2. Files
+                    for (var i = 0, z = files.length - 1; i <= z; i++) {
+                        if (!extMd(files[i])) continue;
+
+                        current = path + files[i];
+                        relpath = current.replace(config.base, "");
+                        (fs.lstatSync(current).isSymbolicLink()) ? link = true : link = false;
+                        if (fs.lstatSync(current).isDirectory()) {
+                            //output_dirs[files[i]] = createItem(current, relpath, "directory", link);
+                        } else {
+                            output_files[files[i]] = createItem(current, relpath, "file", link);
+                        }
+                    }
+
+                    // Merge so we end up with alphabetical directories, then files
+                    // output = merge(output_dirs,output_files);
+                    output = merge(output_files);
+
+                    // Send output
+                    resSuccess(output, res);
+                }
+            });
+            break;
+        case "meta":
+            fs.readdir(path, function (err, files) {
+                if (err) {
+                    resError(101, err, res);
+                } else {
+
+                    // Ensure ending slash on path
+                    (path.slice(-1) !== "/") ? path = path + "/" : path = path;
+
+                    var output = {},
+                        output_dirs = {},
+                        output_files = {},
+                        current,
+                        relpath,
+                        link;
+
+                    // Function to build item for output objects
+                    var createItem = function (current, relpath, type, link) {
+                        return {
+                            path: relpath.replace('//', '/'),
+                            type: type,
+                            size: fs.lstatSync(current).size,
+                            atime: fs.lstatSync(current).atime.getTime(),
+                            mtime: fs.lstatSync(current).mtime.getTime(),
+                            link: link
+                        };
+                    };
+                    var extMd = function extension(element) {
+                        var path = require('path');
+                        var extName = path.extname(element);
+                        return extName === '.json' // change to whatever extensions you want
+                    };
+
+                    // Sort alphabetically
+                    files.sort();
+
+                    // Loop through and create two objects
+                    // 1. Directories
+                    // 2. Files
+                    for (var i = 0, z = files.length - 1; i <= z; i++) {
+                        if (!extMd(files[i])) continue;
+
+                        current = path + files[i];
+                        relpath = current.replace(config.base, "");
+                        (fs.lstatSync(current).isSymbolicLink()) ? link = true : link = false;
+                        if (fs.lstatSync(current).isDirectory()) {
+                            //output_dirs[files[i]] = createItem(current, relpath, "directory", link);
+                        } else {
+                            output_files[files[i]] = createItem(current, relpath, "file", link);
+                        }
+                    }
+
+                    // Merge so we end up with alphabetical directories, then files
+                    // output = merge(output_dirs,output_files);
+                    output = merge(output_files);
+
+                    // Send output
+                    resSuccess(output, res);
+                }
+            });
+            break;
+        case "layout":
+            fs.readdir(path, function (err, files) {
+                if (err) {
+                    resError(101, err, res);
+                } else {
+
+                    // Ensure ending slash on path
+                    (path.slice(-1) !== "/") ? path = path + "/" : path = path;
+
+                    var output = {},
+                        output_dirs = {},
+                        output_files = {},
+                        current,
+                        relpath,
+                        link;
+
+                    // Function to build item for output objects
+                    var createItem = function (current, relpath, type, link) {
+                        return {
+                            path: relpath.replace('//', '/'),
+                            type: type,
+                            size: fs.lstatSync(current).size,
+                            atime: fs.lstatSync(current).atime.getTime(),
+                            mtime: fs.lstatSync(current).mtime.getTime(),
+                            link: link
+                        };
+                    };
+                    var extMd = function extension(element) {
+                        var path = require('path');
+                        var extName = path.extname(element);
+                        return extName === '.html' // change to whatever extensions you want
+                    };
+
+                    // Sort alphabetically
+                    files.sort();
+
+                    // Loop through and create two objects
+                    // 1. Directories
+                    // 2. Files
+                    for (var i = 0, z = files.length - 1; i <= z; i++) {
+                        if (!extMd(files[i])) continue;
+
+                        current = path + files[i];
+                        relpath = current.replace(config.base, "");
+                        (fs.lstatSync(current).isSymbolicLink()) ? link = true : link = false;
+                        if (fs.lstatSync(current).isDirectory()) {
+                            //output_dirs[files[i]] = createItem(current, relpath, "directory", link);
+                        } else {
+                            output_files[files[i]] = createItem(current, relpath, "file", link);
+                        }
+                    }
+
+                    // Merge so we end up with alphabetical directories, then files
+                    // output = merge(output_dirs,output_files);
+                    output = merge(output_files);
 
                     // Send output
                     resSuccess(output, res);
@@ -289,17 +474,17 @@ server.get(commandRegEx, function (req, res, next) {
 
         // Return contents of requested file
         case "file":
-          fs.readFile(path, function (err, data) {
-              if (err) {
-                  resError(102, err, res);
-              } else {
-                  res.writeHead(200, {
-                    'Content-Disposition': 'attachment; filename=' + req.params[2]
-                  });
-                  res.end(data);
-              }
-          });
-          break;
+            fs.readFile(path, function (err, data) {
+                if (err) {
+                    resError(102, err, res);
+                } else {
+                    res.writeHead(200, {
+                        'Content-Disposition': 'attachment; filename=' + req.params[2]
+                    });
+                    res.end(data);
+                }
+            });
+            break;
 
         default:
             // Unknown command
@@ -347,31 +532,31 @@ server.post(commandRegEx, function (req, res, next) {
         case "file":
             // Ensure base path
             if (checkPath(path)) {
-              if (req.params.data) {
-                fs.writeFile(path, req.params.data, function(err) {
-                    if(err) {
-                        resError(107, err, res);
-                    } else {
-                        resSuccess(null, res);
-                    }
-                });
-              } else if (req.files && req.files.filedata) {
-                fs.readFile(req.files.filedata.path, function (err, data) {
-                    fs.writeFile(path, data, function (err) {
-                      if(err) {
-                          resError(107, err, res);
-                      } else {
-                          var hash = md5File.sync(path)
-                          resSuccess(hash, res);
-                      }
+                if (req.params.data) {
+                    fs.writeFile(path, req.params.data, function (err) {
+                        if (err) {
+                            resError(107, err, res);
+                        } else {
+                            resSuccess(null, res);
+                        }
                     });
-                });
-              } else {
-                // No file attached, Base path exists, create empty file
-                fs.openSync(path, "w");
-                resSuccess(null, res);
-                resError(106, null, res);
-              }
+                } else if (req.files && req.files.filedata) {
+                    fs.readFile(req.files.filedata.path, function (err, data) {
+                        fs.writeFile(path, data, function (err) {
+                            if (err) {
+                                resError(107, err, res);
+                            } else {
+                                var hash = md5File.sync(path)
+                                resSuccess(hash, res);
+                            }
+                        });
+                    });
+                } else {
+                    // No file attached, Base path exists, create empty file
+                    fs.openSync(path, "w");
+                    resSuccess(null, res);
+                    resError(106, null, res);
+                }
             } else {
                 // Bad base path
                 resError(103, null, res);
@@ -384,7 +569,7 @@ server.post(commandRegEx, function (req, res, next) {
         case "copy":
             var destination = config.base + "/" + req.params.destination;
             if (checkPath(path) && checkPath(destination)) {
-                fs.copy(path, destination, function(err){
+                fs.copy(path, destination, function (err) {
                     if (err) {
                         resError(104, err, res);
                     }
@@ -429,7 +614,7 @@ server.put(commandRegEx, function (req, res, next) {
 
             var base_path = getBasePath(path);
 
-            fs.rename(path,base_path + "/" + req.params.name, function () {
+            fs.rename(path, base_path + "/" + req.params.name, function () {
                 resSuccess(null, res);
             });
 
@@ -443,26 +628,26 @@ server.put(commandRegEx, function (req, res, next) {
                 if (!fs.lstatSync(path).isDirectory()) {
                     // Write
                     if (req.params.data) {
-                      fs.writeFile(path, req.params.data, function(err) {
-                          if(err) {
-                              resError(107, err, res);
-                          } else {
-                              resSuccess(null, res);
-                          }
-                      });
-                    } else if (req.files && req.files.filedata) {
-                      fs.readFile(req.files.filedata.path, function (err, data) {
-                          fs.writeFile(path, data, function (err) {
-                            if(err) {
+                        fs.writeFile(path, req.params.data, function (err) {
+                            if (err) {
                                 resError(107, err, res);
                             } else {
-                                var hash = md5File.sync(path)
-                                resSuccess(hash, res);
+                                resSuccess(null, res);
                             }
-                          });
-                      });
+                        });
+                    } else if (req.files && req.files.filedata) {
+                        fs.readFile(req.files.filedata.path, function (err, data) {
+                            fs.writeFile(path, data, function (err) {
+                                if (err) {
+                                    resError(107, err, res);
+                                } else {
+                                    var hash = md5File.sync(path)
+                                    resSuccess(hash, res);
+                                }
+                            });
+                        });
                     } else {
-                      resError(106, null, res);
+                        resError(106, null, res);
                     }
                 } else {
                     resError(106, null, res);
