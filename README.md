@@ -14,6 +14,13 @@ FSAPI provides a single-file `server.js` node controller with 2 core dependencie
 
 MacOS: `npm install --no-optional`
 
+Win: `npm install --no-optional`
+### Run 
+
+```
+node server.js
+```
+
 ### Security
 
 The server provides 3 levels of security:
