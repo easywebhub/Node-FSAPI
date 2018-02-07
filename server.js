@@ -113,7 +113,8 @@ var checkIP = function (config, req) {
         curIP,
         b,
         block = [];
-    for (var i = 0, z = config.ips.length - 1; i <= z; i++) {
+
+        for (var i = 0, z = config.ips.length - 1; i <= z; i++) {
         curIP = config.ips[i].split(".");
         b = 0;
         // Compare each block
@@ -305,14 +306,15 @@ server.get(commandRegEx, function (req, res, next) {
                         link;
 
                     // Function to build item for output objects
-                    var createItem = function (current, relpath, type, link) {
+                    var createItem = function (current, relpath, type, data) {
                         return {
                             path: relpath.replace('//', '/'),
                             type: type,
-                            size: fs.lstatSync(current).size,
-                            atime: fs.lstatSync(current).atime.getTime(),
-                            mtime: fs.lstatSync(current).mtime.getTime(),
-                            link: link
+                            // size: fs.lstatSync(current).size,
+                            // atime: fs.lstatSync(current).atime.getTime(),
+                            // mtime: fs.lstatSync(current).mtime.getTime(),
+                            data: data,
+                            title : data.title
                         };
                     };
                     var extMd = function extension(element) {
@@ -324,6 +326,7 @@ server.get(commandRegEx, function (req, res, next) {
                     // Sort alphabetically
                     files.sort();
 
+                    var matter = require('gray-matter');
                     // Loop through and create two objects
                     // 1. Directories
                     // 2. Files
@@ -336,7 +339,8 @@ server.get(commandRegEx, function (req, res, next) {
                         if (fs.lstatSync(current).isDirectory()) {
                             //output_dirs[files[i]] = createItem(current, relpath, "directory", link);
                         } else {
-                            output_files[files[i]] = createItem(current, relpath, "file", link);
+                            var file = matter.read(current, {delims: ['---json', '---']});    
+                            output_files[files[i]] = createItem(current, relpath, "file", file.data);    
                         }
                     }
 

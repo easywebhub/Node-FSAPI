@@ -5,6 +5,7 @@
   "description": "A RESTful FileSystem API for NodeJS ",
   "dependencies": {
     "fs-extra": "~0.6.X",
+    "gray-matter": "^3.1.1",
     "md5-file": "^3.1.1",
     "restify": "4.3.x"
   },
